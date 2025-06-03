@@ -6,18 +6,35 @@ import { CessnaModel } from './CessnaModel';
 import { CityModel } from './CityModel';
 import { OrbitControls } from '@react-three/drei';
 
-function CameraFollower({ planeRef, isUserRotating }) {
-  const { camera } = useThree();
+// function CameraFollower({ planeRef, isUserRotating }) {
+//   const { camera } = useThree();
 
+//   useFrame(() => {
+//     if (!planeRef.current || isUserRotating) return;
+
+//     const plane = planeRef.current;
+//     const offset = new THREE.Vector3(0, 5, 10).applyQuaternion(plane.quaternion);
+//     const desiredPosition = plane.position.clone().add(offset);
+
+//     camera.position.lerp(desiredPosition, 0.1);
+//     camera.lookAt(plane.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
+//   });
+
+//   return null;
+// }
+
+function FollowPlaneCamera({ controlsRef, planeRef }) {
   useFrame(() => {
-    if (!planeRef.current || isUserRotating) return;
+    if (!planeRef.current || !controlsRef.current) return;
 
-    const plane = planeRef.current;
-    const offset = new THREE.Vector3(0, 5, 10).applyQuaternion(plane.quaternion);
-    const desiredPosition = plane.position.clone().add(offset);
+    const target = planeRef.current.position.clone().add(new THREE.Vector3(0, 1.5, 0));
 
-    camera.position.lerp(desiredPosition, 0.1);
-    camera.lookAt(plane.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
+    // ✅ Maintain the user-set camera angle, just move it with the plane
+    const offset = controlsRef.current.object.position.clone().sub(controlsRef.current.target);
+    controlsRef.current.target.copy(target);
+    controlsRef.current.object.position.copy(target.clone().add(offset));
+
+    controlsRef.current.update();
   });
 
   return null;
@@ -50,6 +67,7 @@ function AircraftController({ controlsRef, planeRef }) {
 }
 
 export default function App() {
+  const orbitRef = useRef();
   const [isUserRotating, setIsUserRotating] = useState(false);
   const controlsRef = useRef({
     ArrowUp: false,
@@ -101,7 +119,7 @@ export default function App() {
   }, []);
 
   return (
-    <div style={{ height: '100vh', width: '100vw' }}>
+    <div style={{ height: "100vh", width: "100vw" }}>
       <Canvas shadows camera={{ position: [0, 50, 100], fov: 75 }}>
         <ambientLight intensity={0.5} />
         <directionalLight position={[10, 50, 10]} intensity={1} castShadow />
@@ -116,13 +134,15 @@ export default function App() {
         </Suspense>
 
         <AircraftController controlsRef={controlsRef} planeRef={planeRef} />
-        <CameraFollower planeRef={planeRef} isUserRotating={isUserRotating} />
         <OrbitControls
+          ref={orbitRef}
           enablePan={false}
           enableZoom={false}
           enableRotate={true}
+          target={[0, 1.5, 0]} // will be dynamically updated
           mouseButtons={{ LEFT: 0, MIDDLE: 1, RIGHT: 2 }}
         />
+        <FollowPlaneCamera controlsRef={orbitRef} planeRef={planeRef} />
       </Canvas>
     </div>
   );
