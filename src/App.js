@@ -6,43 +6,23 @@ import { CessnaModel } from './CessnaModel';
 import { CityModel } from './CityModel';
 import { OrbitControls } from '@react-three/drei';
 
-// function CameraFollower({ planeRef, isUserRotating }) {
-//   const { camera } = useThree();
-
-//   useFrame(() => {
-//     if (!planeRef.current || isUserRotating) return;
-
-//     const plane = planeRef.current;
-//     const offset = new THREE.Vector3(0, 5, 10).applyQuaternion(plane.quaternion);
-//     const desiredPosition = plane.position.clone().add(offset);
-
-//     camera.position.lerp(desiredPosition, 0.1);
-//     camera.lookAt(plane.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
-//   });
-
-//   return null;
-// }
-
 function FollowPlaneCamera({ controlsRef, planeRef }) {
   useFrame(() => {
     if (!planeRef.current || !controlsRef.current) return;
 
     const target = planeRef.current.position.clone().add(new THREE.Vector3(0, 1.5, 0));
-
-    // ✅ Maintain the user-set camera angle, just move it with the plane
     const offset = controlsRef.current.object.position.clone().sub(controlsRef.current.target);
     controlsRef.current.target.copy(target);
     controlsRef.current.object.position.copy(target.clone().add(offset));
-
     controlsRef.current.update();
   });
 
   return null;
 }
 
-function AircraftController({ controlsRef, planeRef }) {
+function AircraftController({ controlsRef, planeRef, setCrashed }) {
   const velocity = useRef(new THREE.Vector3());
-  const speed = useRef(0.5); // Constant speed
+  const speed = useRef(0.5);
 
   useFrame(() => {
     const plane = planeRef.current;
@@ -54,13 +34,27 @@ function AircraftController({ controlsRef, planeRef }) {
     if (controlsRef.current.W) plane.rotation.x = Math.max(-0.5, plane.rotation.x - 0.01);
     if (controlsRef.current.S) plane.rotation.x = Math.min(0.5, plane.rotation.x + 0.01);
 
-    // ✅ Always move forward based on rotation
-    const direction = new THREE.Vector3(0, 0, -1)
-      .applyEuler(plane.rotation)
-      .normalize();
-
+    const direction = new THREE.Vector3(0, 0, -1).applyEuler(plane.rotation).normalize();
     velocity.current.copy(direction).multiplyScalar(speed.current);
     plane.position.add(velocity.current);
+
+    // Out-of-bounds check
+    const bounds = 120;
+    if (Math.abs(plane.position.x) > bounds || Math.abs(plane.position.z) > bounds) {
+      plane.rotation.y -= 0.03; // steer back gently
+    }
+
+    // Altitude check
+    if (plane.position.y > 120) {
+      plane.position.set(0, 20, 0);
+      plane.rotation.set(0, Math.PI, 0);
+      speed.current = 0.5;
+    }
+
+    // Crash check
+    if (plane.position.y < 2) {
+      setCrashed(true);
+    }
   });
 
   return null;
@@ -68,7 +62,8 @@ function AircraftController({ controlsRef, planeRef }) {
 
 export default function App() {
   const orbitRef = useRef();
-  const [isUserRotating, setIsUserRotating] = useState(false);
+  const planeRef = useRef();
+  const [crashed, setCrashed] = useState(false);
   const controlsRef = useRef({
     ArrowUp: false,
     ArrowDown: false,
@@ -77,8 +72,6 @@ export default function App() {
     W: false,
     S: false,
   });
-
-  const planeRef = useRef();
 
   useEffect(() => {
     const downHandler = (e) => {
@@ -99,28 +92,21 @@ export default function App() {
       if (e.code === 'KeyS') controlsRef.current.S = false;
     };
 
-    const onMouseDown = (e) => {
-      if (e.button === 0 || e.button === 1 || e.button === 2) setIsUserRotating(true);
-    };
-
-    const onMouseUp = () => setIsUserRotating(false);
-
     window.addEventListener('keydown', downHandler);
     window.addEventListener('keyup', upHandler);
-    window.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mouseup', onMouseUp);
-
     return () => {
       window.removeEventListener('keydown', downHandler);
       window.removeEventListener('keyup', upHandler);
-      window.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mouseup', onMouseUp);
     };
   }, []);
 
   return (
-    <div style={{ height: "100vh", width: "100vw" }}>
-      <Canvas shadows camera={{ position: [0, 50, 100], fov: 75 }}>
+    <div style={{ height: '100vh', width: '100vw', position: 'relative' }}>
+      <Canvas
+        shadows
+        camera={{ position: [0, 50, 100], fov: 75, near: 1, far: 300 }}
+      >
+        <fog attach="fog" args={['#87ceeb', 150, 300]} />
         <ambientLight intensity={0.5} />
         <directionalLight position={[10, 50, 10]} intensity={1} castShadow />
         <Environment preset="sunset" />
@@ -133,17 +119,48 @@ export default function App() {
           </group>
         </Suspense>
 
-        <AircraftController controlsRef={controlsRef} planeRef={planeRef} />
+        <AircraftController
+          controlsRef={controlsRef}
+          planeRef={planeRef}
+          setCrashed={setCrashed}
+        />
+
         <OrbitControls
           ref={orbitRef}
           enablePan={false}
           enableZoom={false}
           enableRotate={true}
-          target={[0, 1.5, 0]} // will be dynamically updated
           mouseButtons={{ LEFT: 0, MIDDLE: 1, RIGHT: 2 }}
         />
         <FollowPlaneCamera controlsRef={orbitRef} planeRef={planeRef} />
       </Canvas>
+
+      {crashed && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'white',
+            padding: '2rem',
+            borderRadius: '12px',
+            boxShadow: '0 0 20px rgba(0,0,0,0.3)',
+            zIndex: 999,
+          }}
+        >
+          <h2 style={{ color: 'red' }}>💥 Crash Detected!</h2>
+          <button
+            onClick={() => {
+              setCrashed(false);
+              planeRef.current.position.set(0, 20, 0);
+              planeRef.current.rotation.set(0, Math.PI, 0);
+            }}
+          >
+            Play Again
+          </button>
+        </div>
+      )}
     </div>
   );
 }
