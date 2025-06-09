@@ -38,10 +38,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-folder
+          path: ./build-folder
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'flight-sim'  # use your actual App Service name
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_709BF6DB78BF45F2AA54C5325F292528 }}
-          package: build  # deploy the downloaded folder
+          package: ./build-folder/build  # deploy the downloaded folder
