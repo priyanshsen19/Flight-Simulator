@@ -70,6 +70,7 @@ jobs:
         name: node-app
 
     - name: 'Deploy to Azure WebApp'
+      run: ls -la
       id: deploy-to-webapp
       uses: azure/webapps-deploy@v2
       with:
