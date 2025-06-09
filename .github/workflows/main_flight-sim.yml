@@ -21,28 +21,31 @@ jobs:
           npm install
           npm run build
 
-      - name: Show directory contents
+      - name: List folder structure (DEBUG)
         run: ls -R
 
       - name: Upload build folder
         uses: actions/upload-artifact@v4
         with:
-          name: build-folder
+          name: build-artifact
           path: build  # Upload the actual production files
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Download build artifact
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: build-folder
-          path: ./build-folder
+          name: build-artifact
+          path: .
+      
+      - name: List files (DEBUG)
+        run: ls -R
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'flight-sim'  # use your actual App Service name
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_709BF6DB78BF45F2AA54C5325F292528 }}
-          package: ./build-folder/build  # deploy the downloaded folder
+          package: build  # deploy the downloaded folder
