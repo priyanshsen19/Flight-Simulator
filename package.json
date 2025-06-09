@@ -15,11 +15,12 @@
     "three": "^0.176.0",
     "web-vitals": "^2.1.4"
   },
-  "scripts": {
-  "start": "react-scripts start",
+ "scripts": {
+  "start": "serve -s build",
   "build": "react-scripts build",
   "postbuild": "cp public/web.config build/web.config"
-  },
+}
+,
   "eslintConfig": {
     "extends": [
       "react-app",
