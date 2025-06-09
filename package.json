@@ -16,11 +16,9 @@
     "web-vitals": "^2.1.4"
   },
  "scripts": {
-  "start": "serve -s build",
   "build": "react-scripts build",
   "postbuild": "cp public/web.config build/web.config"
-}
-,
+},
   "eslintConfig": {
     "extends": [
       "react-app",
