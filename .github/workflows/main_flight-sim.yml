@@ -61,6 +61,5 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'flight-sim'
-          slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_66EA81A73E314214A29DB16F9387DF92 }}
