@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, Suspense } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { CessnaModel } from './CessnaModel';
