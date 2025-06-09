@@ -1,55 +1,47 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and deploy Node.js app to Azure Web App - flight-sim
+name: Build and Deploy React App to Azure - flight-sim
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js version
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '16.20.2'
-          
+
       - name: Install dependencies and build
         run: |
           npm install
           npm run build
 
-      - name: Upload artifact for deployment job
+      - name: Show directory contents
+        run: ls -R
+
+      - name: Upload build folder
         uses: actions/upload-artifact@v4
         with:
-          name: react-build
-          path: build
+          name: build-folder
+          path: build  # Upload the actual production files
 
   deploy:
-    needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: 'Production'
-    
+    needs: build
     steps:
-      - name: Download artifact from build job
+      - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: react-build
-      
-      - name: 'Deploy to Azure Web App'
-        id: deploy-to-webapp
+          name: build-folder
+
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'flight-sim'
-          package: build
+          app-name: 'flight-sim'  # use your actual App Service name
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_709BF6DB78BF45F2AA54C5325F292528 }}
+          package: build  # deploy the downloaded folder
